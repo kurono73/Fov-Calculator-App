@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FOV計算アプリ</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    label { display: block; margin-top: 10px; }
+    input[type="number"] { width: 100px; }
+    .result { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>FOV（画角）計算アプリ</h1>
+  <label>センサー幅（mm）: <input type="number" id="sensorWidth" step="0.01"></label>
+  <label>焦点距離（mm）: <input type="number" id="focalLength" step="0.01"></label>
+  <label><input type="checkbox" id="enableHeight"> 垂直画角/対角画角も計算</label>
+  <div id="heightInput" style="display: none;">
+    <label>センサー高さ（mm）: <input type="number" id="sensorHeight" step="0.01"></label>
+  </div>
+  <button onclick="calculateFOV()">計算</button>
+
+  <div class="result" id="result"></div>
+
+  <script>
+    document.getElementById('enableHeight').addEventListener('change', function() {
+      document.getElementById('heightInput').style.display = this.checked ? 'block' : 'none';
+    });
+
+    function calculateFOV() {
+      const w = parseFloat(document.getElementById('sensorWidth').value);
+      const f = parseFloat(document.getElementById('focalLength').value);
+      const enableHeight = document.getElementById('enableHeight').checked;
+      const h = parseFloat(document.getElementById('sensorHeight').value);
+
+      if (!w || !f || f === 0) {
+        alert("センサー幅と焦点距離を正しく入力してください。");
+        return;
+      }
+
+      const hfov = 2 * Math.atan(w / (2 * f)) * (180 / Math.PI);
+      let output = `<p>水平画角: ${hfov.toFixed(2)}°</p>`;
+
+      if (enableHeight && h) {
+        const vfov = 2 * Math.atan(h / (2 * f)) * (180 / Math.PI);
+        const diagonal = Math.sqrt(w * w + h * h);
+        const dfov = 2 * Math.atan(diagonal / (2 * f)) * (180 / Math.PI);
+        output += `<p>垂直画角: ${vfov.toFixed(2)}°</p>`;
+        output += `<p>対角画角: ${dfov.toFixed(2)}°</p>`;
+      }
+
+      document.getElementById('result').innerHTML = output;
+    }
+  </script>
+</body>
+</html>

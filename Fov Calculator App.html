@@ -13,6 +13,12 @@
     .section { margin-top: 2em; }
     .result { margin-top: 1em; font-weight: bold; }
     .error { color: red; }
+    .copyable { cursor: pointer; text-decoration: underline; color: blue; }
+    .copyable:hover { background-color: #f0f0f0; }
+    .copy-feedback { display: none; color: green; font-size: 0.8em; margin-left: 0.5em; }
+    .section h4 { margin-bottom: 0; }
+    .section h4 { margin-bottom: 0; } 
+    .section ul { margin-top: 0; } 
     @media (max-width: 600px) {
       .form-row { flex-direction: column; align-items: flex-start; }
       label { width: auto; margin-bottom: 0.5em; }
@@ -71,13 +77,6 @@
     <div class="result" id="focalLengthResult"></div>
   </div>
 
-  <div class="section">
-    <h3>技術的補足</h3>
-    <ul>
-      <li>ピンホールモデルを採用し、レンズ歪みは考慮していません。</li>
-      <li>実際の撮影では結果が異なる可能性があります。</li>
-    </ul>
-  </div>
 
   <script>
     // DOM要素のキャッシュ
@@ -104,10 +103,10 @@
       return inputs.every(input => !isNaN(input) && input > 0);
     }
 
-    // アスペクト比のフォーマット（ARRI Alexa Mini LFの解像度対応のため3:2は配列）
+    // アスペクト比のフォーマット
     function formatAspectRatio(ratio) {
       const commonRatios = {
-        "3:2": [3 / 2, 1.44, 1.55], // ARRI Alexa Mini LF (4448×3096 ≈ 1.435, 3424×2202 ≈ 1.555)
+        "3:2": [3 / 2, 1.44, 1.55],
         "4:3": [4 / 3],
         "17:9": [17 / 9],
         "2:1": [2],
@@ -132,6 +131,20 @@
       return closest || `${ratio.toFixed(2)}:1`;
     }
 
+    // クリップボードにコピー
+    function copyToClipboard(text, element) {
+      navigator.clipboard.writeText(text).then(() => {
+        const feedback = document.createElement('span');
+        feedback.className = 'copy-feedback';
+        feedback.textContent = 'コピーしました！';
+        element.appendChild(feedback);
+        feedback.style.display = 'inline';
+        setTimeout(() => feedback.remove(), 1000);
+      }).catch(() => {
+        alert('コピーに失敗しました');
+      });
+    }
+
     // 画角（FOV）の計算
     function calculateFOV() {
       const sensorWidth = parseFloat(elements.sensorWidth.value);
@@ -142,7 +155,7 @@
       }
 
       const fovHorizontal = 2 * Math.atan(sensorWidth / (2 * focalLength)) * 180 / Math.PI;
-      let result = `水平画角: ${fovHorizontal.toFixed(2)}°`;
+      let result = `水平画角: <span class="copyable" data-value="${fovHorizontal.toFixed(2)}">${fovHorizontal.toFixed(2)}°</span>`;
 
       if (elements.enableVerticalFOV.checked) {
         const sensorHeight = parseFloat(elements.sensorHeight.value);
@@ -153,10 +166,16 @@
         const fovVertical = 2 * Math.atan(sensorHeight / (2 * focalLength)) * 180 / Math.PI;
         const diagonal = Math.sqrt(sensorWidth ** 2 + sensorHeight ** 2);
         const fovDiagonal = 2 * Math.atan(diagonal / (2 * focalLength)) * 180 / Math.PI;
-        result += `<br>垂直画角: ${fovVertical.toFixed(2)}°<br>対角画角: ${fovDiagonal.toFixed(2)}°`;
+        result += `<br>垂直画角: <span class="copyable" data-value="${fovVertical.toFixed(2)}">${fovVertical.toFixed(2)}°</span>`;
+        result += `<br>対角画角: <span class="copyable" data-value="${fovDiagonal.toFixed(2)}">${fovDiagonal.toFixed(2)}°</span>`;
       }
 
       elements.fovResult.innerHTML = result;
+
+      // コピーイベントリスナーの追加
+      elements.fovResult.querySelectorAll('.copyable').forEach(el => {
+        el.addEventListener('click', () => copyToClipboard(el.getAttribute('data-value'), el));
+      });
     }
 
     // FOVから焦点距離の計算
@@ -177,7 +196,7 @@
       let sensorDim;
       if (type === "horizontal") {
         sensorDim = width;
-        elements.sensorHeightDisplay.innerText = '高さ: 水平FOVでは不要';
+        elements.sensorHeightDisplay.innerText = '';
         elements.resolutionRow.style.display = 'none';
       } else {
         elements.resolutionRow.style.display = 'flex';
@@ -187,7 +206,12 @@
       }
 
       const focal = sensorDim / (2 * Math.tan(fov / 2));
-      elements.focalLengthResult.innerHTML = `FOV ${elements.fovValue.value}° の時の焦点距離: ${focal.toFixed(2)} mm`;
+      elements.focalLengthResult.innerHTML = `焦点距離: <span class="copyable" data-value="${focal.toFixed(2)}">${focal.toFixed(2)} mm</span>`;
+
+      // コピーイベントリスナーの追加
+      elements.focalLengthResult.querySelectorAll('.copyable').forEach(el => {
+        el.addEventListener('click', () => copyToClipboard(el.getAttribute('data-value'), el));
+      });
     }
 
     // デバウンス関数

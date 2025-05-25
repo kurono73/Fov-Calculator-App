@@ -188,7 +188,7 @@
       }
 
       const fovHorizontal = 2 * Math.atan(sensorWidth / (2 * focalLength)) * 180 / Math.PI;
-      let result = `水平(H): <span class="copyable" data-value="${fovHorizontal.toFixed(2)}">${fovHorizontal.toFixed(2)}°</span>`;
+      let result = `水平画角(H): <span class="copyable" data-value="${fovHorizontal.toFixed(2)}">${fovHorizontal.toFixed(2)}°</span>`;
 
       if (elements.enableVerticalFOV.checked) {
         const sensorHeight = parseFloat(elements.sensorHeight.value);
@@ -199,8 +199,8 @@
         const fovVertical = 2 * Math.atan(sensorHeight / (2 * focalLength)) * 180 / Math.PI;
         const diagonal = Math.sqrt(sensorWidth ** 2 + sensorHeight ** 2);
         const fovDiagonal = 2 * Math.atan(diagonal / (2 * focalLength)) * 180 / Math.PI;
-        result += `<br>垂直(V): <span class="copyable" data-value="${fovVertical.toFixed(2)}">${fovVertical.toFixed(2)}°</span>`;
-        result += `<br>対角(D): <span class="copyable" data-value="${fovDiagonal.toFixed(2)}">${fovDiagonal.toFixed(2)}°</span>`;
+        result += `<br>垂直画角(V): <span class="copyable" data-value="${fovVertical.toFixed(2)}">${fovVertical.toFixed(2)}°</span>`;
+        result += `<br>対角画角(D): <span class="copyable" data-value="${fovDiagonal.toFixed(2)}">${fovDiagonal.toFixed(2)}°</span>`;
       }
 
       elements.fovResult.innerHTML = result;

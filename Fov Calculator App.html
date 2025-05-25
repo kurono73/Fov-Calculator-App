@@ -12,24 +12,29 @@
     .form-row-inline { display: flex; align-items: center; gap: 0.5em; margin-bottom: 1em; }
     .section { margin-top: 2em; }
     .result { margin-top: 1em; font-weight: bold; }
+    .error { color: red; }
+    @media (max-width: 600px) {
+      .form-row { flex-direction: column; align-items: flex-start; }
+      label { width: auto; margin-bottom: 0.5em; }
+    }
   </style>
 </head>
 <body>
-  <h1>FOV(画角)計算ツール</h1>
+  <h1>FOV（画角）計算ツール</h1>
 
   <div class="section">
-    <h2>FOVを計算</h2>
+    <h2>画角を計算</h2>
     <div class="form-row">
       <label for="sensorWidth">センサー幅 (mm)</label>
-      <input type="number" id="sensorWidth" value="36" step="0.01">
+      <input type="number" id="sensorWidth" value="36" step="0.01" min="0.01">
     </div>
     <div class="form-row" id="sensorHeightRow" style="display: none;">
       <label for="sensorHeight">センサー高さ (mm)</label>
-      <input type="number" id="sensorHeight" value="20.25" step="0.01">
+      <input type="number" id="sensorHeight" value="20.25" step="0.01" min="0.01">
     </div>
     <div class="form-row">
       <label for="focalLength">焦点距離 (mm)</label>
-      <input type="number" id="focalLength" value="50" step="0.01">
+      <input type="number" id="focalLength" value="50" step="0.01" min="0.01">
     </div>
     <div class="form-row">
       <input type="checkbox" id="enableVerticalFOV">
@@ -50,121 +55,170 @@
     </div>
     <div class="form-row">
       <label for="fovValue">FOV (度)</label>
-      <input type="number" id="fovValue" value="39.60" step="0.01">
+      <input type="number" id="fovValue" value="39.60" step="0.01" min="0.01">
     </div>
     <div class="form-row">
       <label for="sensorWidth2">センサー幅 (mm)</label>
-      <input type="number" id="sensorWidth2" value="36" step="0.01">
+      <input type="number" id="sensorWidth2" value="36" step="0.01" min="0.01">
       <span id="sensorHeightDisplay"></span>
     </div>
     <div class="form-row" id="resolutionRow">
       <label for="resolution">解像度</label>
-      <input type="number" id="resolutionWidth" value="3840" step="any"> ×
-      <input type="number" id="resolutionHeight" value="2160" step="any">
+      <input type="number" id="resolutionWidth" value="3840" step="1" min="1"> ×
+      <input type="number" id="resolutionHeight" value="2160" step="1" min="1">
       <span id="aspectRatio"></span>
     </div>
     <div class="result" id="focalLengthResult"></div>
   </div>
 
   <div class="section">
-    <h3>使用上の注意</h3>
+    <h3>技術的補足</h3>
     <ul>
-      <li>FOV計算はレンズの歪み（ディストーション）を考慮しない理想値で計算されます。</li>
-      <li>実写やCGソフトウェア上での画角との一致には誤差が生じる可能性があります。</li>
+      <li>ピンホールモデルを採用し、レンズ歪みは考慮していません。</li>
+      <li>実際の撮影では結果が異なる可能性があります。</li>
     </ul>
   </div>
 
   <script>
-    function calculateFOV() {
-      const sensorWidth = parseFloat(document.getElementById('sensorWidth').value);
-      const focalLength = parseFloat(document.getElementById('focalLength').value);
-      const enableVerticalFOV = document.getElementById('enableVerticalFOV').checked;
-      const fovHorizontal = 2 * Math.atan(sensorWidth / (2 * focalLength)) * 180 / Math.PI;
+    // DOM要素のキャッシュ
+    const elements = {
+      sensorWidth: document.getElementById('sensorWidth'),
+      sensorHeight: document.getElementById('sensorHeight'),
+      focalLength: document.getElementById('focalLength'),
+      enableVerticalFOV: document.getElementById('enableVerticalFOV'),
+      sensorHeightRow: document.getElementById('sensorHeightRow'),
+      fovResult: document.getElementById('fovResult'),
+      fovType: document.getElementById('fovType'),
+      fovValue: document.getElementById('fovValue'),
+      sensorWidth2: document.getElementById('sensorWidth2'),
+      resolutionWidth: document.getElementById('resolutionWidth'),
+      resolutionHeight: document.getElementById('resolutionHeight'),
+      sensorHeightDisplay: document.getElementById('sensorHeightDisplay'),
+      resolutionRow: document.getElementById('resolutionRow'),
+      aspectRatio: document.getElementById('aspectRatio'),
+      focalLengthResult: document.getElementById('focalLengthResult')
+    };
 
-      let result = `水平画角: ${fovHorizontal.toFixed(2)}°`;
-
-      if (enableVerticalFOV) {
-        const sensorHeight = parseFloat(document.getElementById('sensorHeight').value);
-        const fovVertical = 2 * Math.atan(sensorHeight / (2 * focalLength)) * 180 / Math.PI;
-        const diagonal = Math.sqrt(sensorWidth ** 2 + sensorHeight ** 2);
-        const fovDiagonal = 2 * Math.atan(diagonal / (2 * focalLength)) * 180 / Math.PI;
-        result += `<br>垂直画角: ${fovVertical.toFixed(2)}°`;
-        result += `<br>対角画角: ${fovDiagonal.toFixed(2)}°`;
-      }
-
-      document.getElementById('fovResult').innerHTML = result;
+    // 入力値のバリデーション
+    function validateInputs(...inputs) {
+      return inputs.every(input => !isNaN(input) && input > 0);
     }
 
-    function calculateFocalLengthFromFOV() {
-      const fov = parseFloat(document.getElementById('fovValue').value) * Math.PI / 180;
-      const type = document.getElementById('fovType').value;
-      const width = parseFloat(document.getElementById('sensorWidth2').value);
-      const resW = parseFloat(document.getElementById('resolutionWidth').value);
-      const resH = parseFloat(document.getElementById('resolutionHeight').value);
-      let aspect = resW / resH;
-
-      function formatAspectRatio(ratio) {
-        const commonRatios = {
-          "3:2": 3 / 2,
-          "17:9": 17 / 9,
-          "2:1": 2 / 1,
-          "1:1": 1 / 1,
-          "6:5": 6 / 5,
-          "8:9": 8 / 9,
-          "1.85:1": 1.85,
-          "2.39:1": 2.39,
-          "16:9": 16 / 9
-        };
-
-        let closest = "16:9";
-        let minDiff = Infinity;
-        for (const [label, val] of Object.entries(commonRatios)) {
+    // アスペクト比のフォーマット（ARRI Alexa Mini LFの解像度対応のため3:2は配列）
+    function formatAspectRatio(ratio) {
+      const commonRatios = {
+        "3:2": [3 / 2, 1.44, 1.55], // ARRI Alexa Mini LF (4448×3096 ≈ 1.435, 3424×2202 ≈ 1.555)
+        "4:3": [4 / 3],
+        "17:9": [17 / 9],
+        "2:1": [2],
+        "1:1": [1],
+        "6:5": [6 / 5],
+        "8:9": [8 / 9],
+        "16:9": [16 / 9],
+        "1.85:1": [1.85],
+        "2.39:1": [2.39]
+      };
+      let closest = null;
+      let minDiff = 0.05;
+      for (const [label, valArray] of Object.entries(commonRatios)) {
+        for (const val of Array.isArray(valArray) ? valArray : [valArray]) {
           const diff = Math.abs(ratio - val);
           if (diff < minDiff) {
             minDiff = diff;
             closest = label;
           }
         }
-        return closest;
+      }
+      return closest || `${ratio.toFixed(2)}:1`;
+    }
+
+    // 画角（FOV）の計算
+    function calculateFOV() {
+      const sensorWidth = parseFloat(elements.sensorWidth.value);
+      const focalLength = parseFloat(elements.focalLength.value);
+      if (!validateInputs(sensorWidth, focalLength)) {
+        elements.fovResult.innerHTML = '<span class="error">エラー: 正の数値を入力してください</span>';
+        return;
       }
 
-      const ratioLabel = formatAspectRatio(aspect);
-      document.getElementById('aspectRatio').innerText = ratioLabel;
+      const fovHorizontal = 2 * Math.atan(sensorWidth / (2 * focalLength)) * 180 / Math.PI;
+      let result = `水平画角: ${fovHorizontal.toFixed(2)}°`;
+
+      if (elements.enableVerticalFOV.checked) {
+        const sensorHeight = parseFloat(elements.sensorHeight.value);
+        if (!validateInputs(sensorHeight)) {
+          elements.fovResult.innerHTML = '<span class="error">エラー: センサー高さに正の数値を入力してください</span>';
+          return;
+        }
+        const fovVertical = 2 * Math.atan(sensorHeight / (2 * focalLength)) * 180 / Math.PI;
+        const diagonal = Math.sqrt(sensorWidth ** 2 + sensorHeight ** 2);
+        const fovDiagonal = 2 * Math.atan(diagonal / (2 * focalLength)) * 180 / Math.PI;
+        result += `<br>垂直画角: ${fovVertical.toFixed(2)}°<br>対角画角: ${fovDiagonal.toFixed(2)}°`;
+      }
+
+      elements.fovResult.innerHTML = result;
+    }
+
+    // FOVから焦点距離の計算
+    function calculateFocalLengthFromFOV() {
+      const fov = parseFloat(elements.fovValue.value) * Math.PI / 180;
+      const type = elements.fovType.value;
+      const width = parseFloat(elements.sensorWidth2.value);
+      const resW = parseFloat(elements.resolutionWidth.value);
+      const resH = parseFloat(elements.resolutionHeight.value);
+      if (!validateInputs(fov, width, resW, resH)) {
+        elements.focalLengthResult.innerHTML = '<span class="error">エラー: 正の数値を入力してください</span>';
+        return;
+      }
+
+      const aspect = resW / resH;
+      elements.aspectRatio.innerText = `アスペクト比: ${formatAspectRatio(aspect)}`;
 
       let sensorDim;
       if (type === "horizontal") {
         sensorDim = width;
-        document.getElementById('sensorHeightDisplay').innerText = '';
-        document.getElementById('resolutionRow').style.display = 'none';
+        elements.sensorHeightDisplay.innerText = '高さ: 水平FOVでは不要';
+        elements.resolutionRow.style.display = 'none';
       } else {
-        document.getElementById('resolutionRow').style.display = 'flex';
+        elements.resolutionRow.style.display = 'flex';
         const height = width / aspect;
-        document.getElementById('sensorHeightDisplay').innerText = `高さ: ${height.toFixed(2)} mm`;
-
-        if (type === "vertical") {
-          sensorDim = height;
-        } else if (type === "diagonal") {
-          sensorDim = Math.sqrt(width ** 2 + height ** 2);
-        }
+        elements.sensorHeightDisplay.innerText = `高さ: ${height.toFixed(2)} mm`;
+        sensorDim = type === "vertical" ? height : Math.sqrt(width ** 2 + height ** 2);
       }
 
       const focal = sensorDim / (2 * Math.tan(fov / 2));
-      document.getElementById('focalLengthResult').innerHTML = `焦点距離: ${focal.toFixed(2)} mm`;
+      elements.focalLengthResult.innerHTML = `FOV ${elements.fovValue.value}° の時の焦点距離: ${focal.toFixed(2)} mm`;
     }
 
-    document.getElementById('enableVerticalFOV').addEventListener('change', (e) => {
-      document.getElementById('sensorHeightRow').style.display = e.target.checked ? 'flex' : 'none';
+    // デバウンス関数
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // イベントリスナー
+    elements.enableVerticalFOV.addEventListener('change', (e) => {
+      elements.sensorHeightRow.style.display = e.target.checked ? 'flex' : 'none';
       calculateFOV();
     });
 
-    document.querySelectorAll('#sensorWidth, #focalLength, #sensorHeight').forEach(el => {
-      el.addEventListener('input', calculateFOV);
+    [elements.sensorWidth, elements.focalLength, elements.sensorHeight].forEach(el => {
+      el.addEventListener('input', debounce(calculateFOV, 300));
     });
 
-    document.querySelectorAll('#fovValue, #fovType, #sensorWidth2, #resolutionWidth, #resolutionHeight').forEach(el => {
-      el.addEventListener('input', calculateFocalLengthFromFOV);
+    [elements.fovValue, elements.fovType, elements.sensorWidth2, elements.resolutionWidth, elements.resolutionHeight].forEach(el => {
+      el.addEventListener('input', debounce(calculateFocalLengthFromFOV, 300));
     });
 
+    // 初期化
+    elements.sensorHeightRow.style.display = elements.enableVerticalFOV.checked ? 'flex' : 'none';
     calculateFOV();
     calculateFocalLengthFromFOV();
   </script>

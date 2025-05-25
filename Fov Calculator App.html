@@ -1,250 +1,257 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FOV(画角)計算ツール</title>
-  <style>
-    body { font-family: sans-serif; padding: 2em; }
-    label { display: inline-block; width: 150px; margin-right: 1em; }
-    input[type="number"] { width: 100px; }
-    .form-row { margin-bottom: 1em; display: flex; align-items: center; gap: 0.5em; }
-    .form-row-inline { display: flex; align-items: center; gap: 0.5em; margin-bottom: 1em; }
-    .section { margin-top: 2em; }
-    .result { margin-top: 1em; font-weight: bold; }
-    .error { color: red; }
-    .copyable { cursor: pointer; text-decoration: underline; color: blue; }
-    .copyable:hover { background-color: #f0f0f0; }
-    .copy-feedback { display: none; color: green; font-size: 0.8em; margin-left: 0.5em; }
-    .section h4 { margin-bottom: 0; }
-    .section h4 { margin-bottom: 0; } 
-    .section ul { margin-top: 0; } 
-    @media (max-width: 600px) {
-      .form-row { flex-direction: column; align-items: flex-start; }
-      label { width: auto; margin-bottom: 0.5em; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FOV（画角）計算ツール</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    label { display: inline-block; width: 150px; margin-right: 1em; }
+    input[type="number"] { width: 100px; }
+    .form-row { margin-bottom: 1em; display: flex; align-items: center; gap: 0.5em; }
+    .form-row-inline { display: flex; align-items: center; gap: 0.5em; margin-bottom: 1em; }
+    .section { margin-top: 2em; }
+    .result { margin-top: 1em; font-weight: bold; }
+    .error { color: red; }
+    .copyable { cursor: pointer; text-decoration: underline; color: blue; }
+    .copyable:hover { background-color: #f0f0f0; }
+    .copy-feedback { display: none; color: green; font-size: 0.8em; margin-left: 0.5em; }
+    .section h4 { margin-bottom: 0; }
+    .section h4 { margin-bottom: 0; } /* この行は元のコードにもあった冗長な記述ですが、改変しないためそのまま残します */
+    .section ul { margin-top: 0; }
+    /* ここから修正点 */
+    /* 「垂直画角/対角画角も計算」のラベルに対するCSS修正 */
+    #enableVerticalFOV + label {
+        width: auto; /* ラベルの幅をコンテンツに合わせて自動調整 */
+        white-space: nowrap; /* テキストの改行を禁止 */
     }
-  </style>
+    /* 修正点ここまで */
+    @media (max-width: 600px) {
+      .form-row { flex-direction: column; align-items: flex-start; }
+      label { width: auto; margin-bottom: 0.5em; }
+      /* モバイルビューでは、テキストが長すぎる場合に改行を許可するようにする */
+      #enableVerticalFOV + label {
+          white-space: normal;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>FOV(画角)計算ツール</h1>
+  <h1>FOV（画角）計算ツール</h1>
 
-  <div class="section">
-    <h2>画角を計算</h2>
-    <div class="form-row">
-      <label for="sensorWidth">センサー幅 (mm)</label>
-      <input type="number" id="sensorWidth" value="36" step="0.01" min="0.01">
-    </div>
-    <div class="form-row" id="sensorHeightRow" style="display: none;">
-      <label for="sensorHeight">センサー高さ (mm)</label>
-      <input type="number" id="sensorHeight" value="20.25" step="0.01" min="0.01">
-    </div>
-    <div class="form-row">
-      <label for="focalLength">焦点距離 (mm)</label>
-      <input type="number" id="focalLength" value="50" step="0.01" min="0.01">
-    </div>
-    <div class="form-row">
-      <input type="checkbox" id="enableVerticalFOV">
-      <label for="enableVerticalFOV">垂直画角・対角画角も計算</label>
-    </div>
-    <div class="result" id="fovResult"></div>
-  </div>
+  <div class="section">
+    <h2>画角を計算</h2>
+    <div class="form-row">
+      <label for="sensorWidth">センサー幅 (mm)</label>
+      <input type="number" id="sensorWidth" value="36" step="0.01" min="0.01">
+    </div>
+    <div class="form-row" id="sensorHeightRow" style="display: none;">
+      <label for="sensorHeight">センサー高さ (mm)</label>
+      <input type="number" id="sensorHeight" value="20.25" step="0.01" min="0.01">
+    </div>
+    <div class="form-row">
+      <input type="checkbox" id="enableVerticalFOV">
+      <label for="enableVerticalFOV">垂直画角/対角画角も計算</label>
+    </div>
+    <div class="result" id="fovResult"></div>
+  </div>
 
-  <div class="section">
-    <h2>FOVから焦点距離を計算</h2>
-    <div class="form-row">
-      <label for="fovType">FOVの種類</label>
-      <select id="fovType">
-        <option value="horizontal">水平</option>
-        <option value="vertical">垂直</option>
-        <option value="diagonal">対角</option>
-      </select>
-    </div>
-    <div class="form-row">
-      <label for="fovValue">FOV (度)</label>
-      <input type="number" id="fovValue" value="39.60" step="0.01" min="0.01">
-    </div>
-    <div class="form-row">
-      <label for="sensorWidth2">センサー幅 (mm)</label>
-      <input type="number" id="sensorWidth2" value="36" step="0.01" min="0.01">
-      <span id="sensorHeightDisplay"></span>
-    </div>
-    <div class="form-row" id="resolutionRow">
-      <label for="resolution">解像度</label>
-      <input type="number" id="resolutionWidth" value="3840" step="1" min="1"> ×
-      <input type="number" id="resolutionHeight" value="2160" step="1" min="1">
-      <span id="aspectRatio"></span>
-    </div>
-    <div class="result" id="focalLengthResult"></div>
-  </div>
+  <div class="section">
+    <h2>FOVから焦点距離を計算</h2>
+    <div class="form-row">
+      <label for="fovType">FOVの種類</label>
+      <select id="fovType">
+        <option value="horizontal">水平</option>
+        <option value="vertical">垂直</option>
+        <option value="diagonal">対角</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="fovValue">FOV (度)</label>
+      <input type="number" id="fovValue" value="39.60" step="0.01" min="0.01">
+    </div>
+    <div class="form-row">
+      <label for="sensorWidth2">センサー幅 (mm)</label>
+      <input type="number" id="sensorWidth2" value="36" step="0.01" min="0.01">
+      <span id="sensorHeightDisplay"></span>
+    </div>
+    <div class="form-row" id="resolutionRow">
+      <label for="resolution">解像度</label>
+      <input type="number" id="resolutionWidth" value="3840" step="1" min="1"> ×
+      <input type="number" id="resolutionHeight" value="2160" step="1" min="1">
+      <span id="aspectRatio"></span>
+    </div>
+    <div class="result" id="focalLengthResult"></div>
+  </div>
 
 
-  <script>
-    // DOM要素のキャッシュ
-    const elements = {
-      sensorWidth: document.getElementById('sensorWidth'),
-      sensorHeight: document.getElementById('sensorHeight'),
-      focalLength: document.getElementById('focalLength'),
-      enableVerticalFOV: document.getElementById('enableVerticalFOV'),
-      sensorHeightRow: document.getElementById('sensorHeightRow'),
-      fovResult: document.getElementById('fovResult'),
-      fovType: document.getElementById('fovType'),
-      fovValue: document.getElementById('fovValue'),
-      sensorWidth2: document.getElementById('sensorWidth2'),
-      resolutionWidth: document.getElementById('resolutionWidth'),
-      resolutionHeight: document.getElementById('resolutionHeight'),
-      sensorHeightDisplay: document.getElementById('sensorHeightDisplay'),
-      resolutionRow: document.getElementById('resolutionRow'),
-      aspectRatio: document.getElementById('aspectRatio'),
-      focalLengthResult: document.getElementById('focalLengthResult')
-    };
+  <script>
+    // DOM要素のキャッシュ
+    const elements = {
+      sensorWidth: document.getElementById('sensorWidth'),
+      sensorHeight: document.getElementById('sensorHeight'),
+      focalLength: document.getElementById('focalLength'),
+      enableVerticalFOV: document.getElementById('enableVerticalFOV'),
+      sensorHeightRow: document.getElementById('sensorHeightRow'),
+      fovResult: document.getElementById('fovResult'),
+      fovType: document.getElementById('fovType'),
+      fovValue: document.getElementById('fovValue'),
+      sensorWidth2: document.getElementById('sensorWidth2'),
+      resolutionWidth: document.getElementById('resolutionWidth'),
+      resolutionHeight: document.getElementById('resolutionHeight'),
+      sensorHeightDisplay: document.getElementById('sensorHeightDisplay'),
+      resolutionRow: document.getElementById('resolutionRow'),
+      aspectRatio: document.getElementById('aspectRatio'),
+      focalLengthResult: document.getElementById('focalLengthResult')
+    };
 
-    // 入力値のバリデーション
-    function validateInputs(...inputs) {
-      return inputs.every(input => !isNaN(input) && input > 0);
-    }
+    // 入力値のバリデーション
+    function validateInputs(...inputs) {
+      return inputs.every(input => !isNaN(input) && input > 0);
+    }
 
-    // アスペクト比のフォーマット
-    function formatAspectRatio(ratio) {
-      const commonRatios = {
-        "3:2": [3 / 2, 1.44, 1.55],
-        "4:3": [4 / 3],
-        "17:9": [17 / 9],
-        "2:1": [2],
-        "1:1": [1],
-        "6:5": [6 / 5],
-        "8:9": [8 / 9],
-        "16:9": [16 / 9],
-        "1.85:1": [1.85],
-        "2.39:1": [2.39]
-      };
-      let closest = null;
-      let minDiff = 0.05;
-      for (const [label, valArray] of Object.entries(commonRatios)) {
-        for (const val of Array.isArray(valArray) ? valArray : [valArray]) {
-          const diff = Math.abs(ratio - val);
-          if (diff < minDiff) {
-            minDiff = diff;
-            closest = label;
-          }
-        }
-      }
-      return closest || `${ratio.toFixed(2)}:1`;
-    }
+    // アスペクト比のフォーマット
+    function formatAspectRatio(ratio) {
+      const commonRatios = {
+        "3:2": [3 / 2, 1.44, 1.55],
+        "4:3": [4 / 3],
+        "17:9": [17 / 9],
+        "2:1": [2],
+        "1:1": [1],
+        "6:5": [6 / 5],
+        "8:9": [8 / 9],
+        "16:9": [16 / 9],
+        "1.85:1": [1.85],
+        "2.39:1": [2.39]
+      };
+      let closest = null;
+      let minDiff = 0.05;
+      for (const [label, valArray] of Object.entries(commonRatios)) {
+        for (const val of Array.isArray(valArray) ? valArray : [valArray]) {
+          const diff = Math.abs(ratio - val);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closest = label;
+          }
+        }
+      }
+      return closest || `${ratio.toFixed(2)}:1`;
+    }
 
-    // クリップボードにコピー
-    function copyToClipboard(text, element) {
-      navigator.clipboard.writeText(text).then(() => {
-        const feedback = document.createElement('span');
-        feedback.className = 'copy-feedback';
-        feedback.textContent = 'コピーしました！';
-        element.appendChild(feedback);
-        feedback.style.display = 'inline';
-        setTimeout(() => feedback.remove(), 1000);
-      }).catch(() => {
-        alert('コピーに失敗しました');
-      });
-    }
+    // クリップボードにコピー
+    function copyToClipboard(text, element) {
+      navigator.clipboard.writeText(text).then(() => {
+        const feedback = document.createElement('span');
+        feedback.className = 'copy-feedback';
+        feedback.textContent = 'コピーしました！';
+        element.appendChild(feedback);
+        feedback.style.display = 'inline';
+        setTimeout(() => feedback.remove(), 1000);
+      }).catch(() => {
+        alert('コピーに失敗しました');
+      });
+    }
 
-    // 画角（FOV）の計算
-    function calculateFOV() {
-      const sensorWidth = parseFloat(elements.sensorWidth.value);
-      const focalLength = parseFloat(elements.focalLength.value);
-      if (!validateInputs(sensorWidth, focalLength)) {
-        elements.fovResult.innerHTML = '<span class="error">エラー: 正の数値を入力してください</span>';
-        return;
-      }
+    // 画角（FOV）の計算
+    function calculateFOV() {
+      const sensorWidth = parseFloat(elements.sensorWidth.value);
+      const focalLength = parseFloat(elements.focalLength.value);
+      if (!validateInputs(sensorWidth, focalLength)) {
+        elements.fovResult.innerHTML = '<span class="error">エラー: 正の数値を入力してください</span>';
+        return;
+      }
 
-      const fovHorizontal = 2 * Math.atan(sensorWidth / (2 * focalLength)) * 180 / Math.PI;
-      let result = `水平画角: <span class="copyable" data-value="${fovHorizontal.toFixed(2)}">${fovHorizontal.toFixed(2)}°</span>`;
+      const fovHorizontal = 2 * Math.atan(sensorWidth / (2 * focalLength)) * 180 / Math.PI;
+      let result = `水平画角: <span class="copyable" data-value="${fovHorizontal.toFixed(2)}">${fovHorizontal.toFixed(2)}°</span>`;
 
-      if (elements.enableVerticalFOV.checked) {
-        const sensorHeight = parseFloat(elements.sensorHeight.value);
-        if (!validateInputs(sensorHeight)) {
-          elements.fovResult.innerHTML = '<span class="error">エラー: センサー高さに正の数値を入力してください</span>';
-          return;
-        }
-        const fovVertical = 2 * Math.atan(sensorHeight / (2 * focalLength)) * 180 / Math.PI;
-        const diagonal = Math.sqrt(sensorWidth ** 2 + sensorHeight ** 2);
-        const fovDiagonal = 2 * Math.atan(diagonal / (2 * focalLength)) * 180 / Math.PI;
-        result += `<br>垂直画角: <span class="copyable" data-value="${fovVertical.toFixed(2)}">${fovVertical.toFixed(2)}°</span>`;
-        result += `<br>対角画角: <span class="copyable" data-value="${fovDiagonal.toFixed(2)}">${fovDiagonal.toFixed(2)}°</span>`;
-      }
+      if (elements.enableVerticalFOV.checked) {
+        const sensorHeight = parseFloat(elements.sensorHeight.value);
+        if (!validateInputs(sensorHeight)) {
+          elements.fovResult.innerHTML = '<span class="error">エラー: センサー高さに正の数値を入力してください</span>';
+          return;
+        }
+        const fovVertical = 2 * Math.atan(sensorHeight / (2 * focalLength)) * 180 / Math.PI;
+        const diagonal = Math.sqrt(sensorWidth ** 2 + sensorHeight ** 2);
+        const fovDiagonal = 2 * Math.atan(diagonal / (2 * focalLength)) * 180 / Math.PI;
+        result += `<br>垂直画角: <span class="copyable" data-value="${fovVertical.toFixed(2)}">${fovVertical.toFixed(2)}°</span>`;
+        result += `<br>対角画角: <span class="copyable" data-value="${fovDiagonal.toFixed(2)}">${fovDiagonal.toFixed(2)}°</span>`;
+      }
 
-      elements.fovResult.innerHTML = result;
+      elements.fovResult.innerHTML = result;
 
-      // コピーイベントリスナーの追加
-      elements.fovResult.querySelectorAll('.copyable').forEach(el => {
-        el.addEventListener('click', () => copyToClipboard(el.getAttribute('data-value'), el));
-      });
-    }
+      // コピーイベントリスナーの追加
+      elements.fovResult.querySelectorAll('.copyable').forEach(el => {
+        el.addEventListener('click', () => copyToClipboard(el.getAttribute('data-value'), el));
+      });
+    }
 
-    // FOVから焦点距離の計算
-    function calculateFocalLengthFromFOV() {
-      const fov = parseFloat(elements.fovValue.value) * Math.PI / 180;
-      const type = elements.fovType.value;
-      const width = parseFloat(elements.sensorWidth2.value);
-      const resW = parseFloat(elements.resolutionWidth.value);
-      const resH = parseFloat(elements.resolutionHeight.value);
-      if (!validateInputs(fov, width, resW, resH)) {
-        elements.focalLengthResult.innerHTML = '<span class="error">エラー: 正の数値を入力してください</span>';
-        return;
-      }
+    // FOVから焦点距離の計算
+    function calculateFocalLengthFromFOV() {
+      const fov = parseFloat(elements.fovValue.value) * Math.PI / 180;
+      const type = elements.fovType.value;
+      const width = parseFloat(elements.sensorWidth2.value);
+      const resW = parseFloat(elements.resolutionWidth.value);
+      const resH = parseFloat(elements.resolutionHeight.value);
+      if (!validateInputs(fov, width, resW, resH)) {
+        elements.focalLengthResult.innerHTML = '<span class="error">エラー: 正の数値を入力してください</span>';
+        return;
+      }
 
-      const aspect = resW / resH;
-      elements.aspectRatio.innerText = `アスペクト比: ${formatAspectRatio(aspect)}`;
+      const aspect = resW / resH;
+      elements.aspectRatio.innerText = `アスペクト比: ${formatAspectRatio(aspect)}`;
 
-      let sensorDim;
-      if (type === "horizontal") {
-        sensorDim = width;
-        elements.sensorHeightDisplay.innerText = '';
-        elements.resolutionRow.style.display = 'none';
-      } else {
-        elements.resolutionRow.style.display = 'flex';
-        const height = width / aspect;
-        elements.sensorHeightDisplay.innerText = `高さ: ${height.toFixed(2)} mm`;
-        sensorDim = type === "vertical" ? height : Math.sqrt(width ** 2 + height ** 2);
-      }
+      let sensorDim;
+      if (type === "horizontal") {
+        sensorDim = width;
+        elements.sensorHeightDisplay.innerText = '';
+        elements.resolutionRow.style.display = 'none';
+      } else {
+        elements.resolutionRow.style.display = 'flex';
+        const height = width / aspect;
+        elements.sensorHeightDisplay.innerText = `高さ: ${height.toFixed(2)} mm`;
+        sensorDim = type === "vertical" ? height : Math.sqrt(width ** 2 + height ** 2);
+      }
 
-      const focal = sensorDim / (2 * Math.tan(fov / 2));
-      elements.focalLengthResult.innerHTML = `焦点距離: <span class="copyable" data-value="${focal.toFixed(2)}">${focal.toFixed(2)} mm</span>`;
+      const focal = sensorDim / (2 * Math.tan(fov / 2));
+      elements.focalLengthResult.innerHTML = `焦点距離: <span class="copyable" data-value="${focal.toFixed(2)}">${focal.toFixed(2)} mm</span>`;
 
-      // コピーイベントリスナーの追加
-      elements.focalLengthResult.querySelectorAll('.copyable').forEach(el => {
-        el.addEventListener('click', () => copyToClipboard(el.getAttribute('data-value'), el));
-      });
-    }
+      // コピーイベントリスナーの追加
+      elements.focalLengthResult.querySelectorAll('.copyable').forEach(el => {
+        el.addEventListener('click', () => copyToClipboard(el.getAttribute('data-value'), el));
+      });
+    }
 
-    // デバウンス関数
-    function debounce(func, wait) {
-      let timeout;
-      return function executedFunction(...args) {
-        const later = () => {
-          clearTimeout(timeout);
-          func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-      };
-    }
+    // デバウンス関数
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
 
-    // イベントリスナー
-    elements.enableVerticalFOV.addEventListener('change', (e) => {
-      elements.sensorHeightRow.style.display = e.target.checked ? 'flex' : 'none';
-      calculateFOV();
-    });
+    // イベントリスナー
+    elements.enableVerticalFOV.addEventListener('change', (e) => {
+      elements.sensorHeightRow.style.display = e.target.checked ? 'flex' : 'none';
+      calculateFOV();
+    });
 
-    [elements.sensorWidth, elements.focalLength, elements.sensorHeight].forEach(el => {
-      el.addEventListener('input', debounce(calculateFOV, 300));
-    });
+    [elements.sensorWidth, elements.focalLength, elements.sensorHeight].forEach(el => {
+      el.addEventListener('input', debounce(calculateFOV, 300));
+    });
 
-    [elements.fovValue, elements.fovType, elements.sensorWidth2, elements.resolutionWidth, elements.resolutionHeight].forEach(el => {
-      el.addEventListener('input', debounce(calculateFocalLengthFromFOV, 300));
-    });
+    [elements.fovValue, elements.fovType, elements.sensorWidth2, elements.resolutionWidth, elements.resolutionHeight].forEach(el => {
+      el.addEventListener('input', debounce(calculateFocalLengthFromFOV, 300));
+    });
 
-    // 初期化
-    elements.sensorHeightRow.style.display = elements.enableVerticalFOV.checked ? 'flex' : 'none';
-    calculateFOV();
-    calculateFocalLengthFromFOV();
-  </script>
+    // 初期化
+    elements.sensorHeightRow.style.display = elements.enableVerticalFOV.checked ? 'flex' : 'none';
+    calculateFOV();
+    calculateFocalLengthFromFOV();
+  </script>
 </body>
 </html>
